@@ -116,7 +116,7 @@ function BottomSheetHandleContainerComponent({
         layout: { height },
       },
     }: LayoutChangeEvent) {
-      handleHeight.value = height;
+      handleHeight.set(height);
 
       if (__DEV__) {
         print({
@@ -133,7 +133,7 @@ function BottomSheetHandleContainerComponent({
   );
   const handleBoundingClientRect = useCallback(
     ({ height }: BoundingClientRect) => {
-      handleHeight.value = height;
+      handleHeight.set(height);
       if (__DEV__) {
         print({
           component: BottomSheetHandleContainer.displayName,

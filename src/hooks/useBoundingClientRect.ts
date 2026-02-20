@@ -45,29 +45,35 @@ export function useBoundingClientRect(
   ref: RefObject<View | null>,
   handler: (layout: BoundingClientRect) => void
 ) {
-  if (!isFabricInstalled()) {
-    return;
-  }
 
-  // biome-ignore lint/correctness/useHookAtTopLevel: `isFabricInstalled` is a constant that will not change during the runtime
   useLayoutEffect(() => {
-    if (!ref || !ref.current) {
+    if (!isFabricInstalled()) {
       return;
     }
 
-    // @ts-ignore 👉 https://github.com/facebook/react/commit/53b1f69ba
-    if (ref.current.unstable_getBoundingClientRect !== null) {
-      // @ts-ignore https://github.com/facebook/react/commit/53b1f69ba
-      const layout = ref.current.unstable_getBoundingClientRect();
+    if (!ref?.current) {
+      return;
+    }
+
+    const element = ref.current;
+
+    // ✅ Правильная проверка: существует ли метод и является ли функцией
+    if (typeof (element as any).unstable_getBoundingClientRect === 'function') {
+      // @ts-ignore - метод существует, но TypeScript не знает о нём
+      const layout = element.unstable_getBoundingClientRect();
       handler(layout);
       return;
     }
 
-    // @ts-ignore once it `unstable_getBoundingClientRect` gets stable 🤞.
-    if (ref.current.getBoundingClientRect !== null) {
-      // @ts-ignore once it `unstable_getBoundingClientRect` gets stable.
-      const layout = ref.current.getBoundingClientRect();
+    // ✅ Проверяем стабильную версию метода
+    if (typeof (element as any).getBoundingClientRect === 'function') {
+      // @ts-ignore
+      const layout = element.getBoundingClientRect();
       handler(layout);
+      return;
     }
-  });
+
+    // Если ни один метод не доступен
+    console.warn('Bounding client rect methods not available on this view');
+  }, [ref, handler]);
 }
