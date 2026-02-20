@@ -101,8 +101,11 @@ const BottomSheetModalProviderWrapper = ({
      * Here we remove the unmounted sheet and update
      * the sheets queue.
      */
-    _sheetsQueue.splice(sheetIndex, 1);
-    sheetsQueueRef.current = _sheetsQueue;
+
+    if (sheetIndex !== -1) {
+      _sheetsQueue.splice(sheetIndex, 1);
+      sheetsQueueRef.current = _sheetsQueue;
+    }
 
     /**
      * Here we try to restore previous sheet position if unmounted
