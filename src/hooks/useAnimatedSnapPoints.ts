@@ -14,14 +14,6 @@ import { normalizeSnapPoint } from '../utilities';
 /**
  * Convert percentage snap points to pixels in screen and calculate
  * the accurate snap points positions.
- * @param snapPoints provided snap points.
- * @param containerHeight BottomSheetContainer height.
- * @param contentHeight content size.
- * @param handleHeight handle size.
- * @param footerHeight footer size.
- * @param enableDynamicSizing
- * @param maxDynamicContentSize
- * @returns {SharedValue<number[]>}
  */
 export const useAnimatedSnapPoints = (
   snapPoints: BottomSheetProps['snapPoints'],
@@ -33,14 +25,8 @@ export const useAnimatedSnapPoints = (
   maxDynamicContentSize: BottomSheetProps['maxDynamicContentSize']
 ): [SharedValue<number[]>, SharedValue<number>, SharedValue<boolean>] => {
   const dynamicSnapPointIndex = useSharedValue<number>(-1);
-  const normalizedSnapPoints = useDerivedValue(() => {
-    // early exit, if container layout is not ready
-    const isContainerLayoutReady =
-      containerHeight.value !== INITIAL_CONTAINER_HEIGHT;
-    if (!isContainerLayoutReady) {
-      return [INITIAL_SNAP_POINT];
-    }
 
+  const normalizedSnapPoints = useDerivedValue(() => {
     // extract snap points from provided props
     const _snapPoints = snapPoints
       ? 'value' in snapPoints
@@ -48,49 +34,66 @@ export const useAnimatedSnapPoints = (
         : snapPoints
       : [];
 
-    // normalized all provided snap points, converting percentage
-    // values into absolute values.
+    // Если нет снэп-поинтов, возвращаем пустой массив
+    if (_snapPoints.length === 0) {
+      return [];
+    }
+
+    // Проверяем готовность контейнера
+    const isContainerLayoutReady =
+      containerHeight.value !== INITIAL_CONTAINER_HEIGHT;
+
+    // Если контейнер не готов, используем высоту экрана как запасной вариант
+    const availableHeight = isContainerLayoutReady
+      ? containerHeight.value
+      : 800; // Запасная высота, если контейнер не готов
+
+    // Нормализуем все предоставленные снэп-поинты
     let _normalizedSnapPoints = _snapPoints.map(snapPoint =>
-      normalizeSnapPoint(snapPoint, containerHeight.value)
+      normalizeSnapPoint(snapPoint, availableHeight)
     ) as number[];
 
-    // return normalized snap points if dynamic sizing is not enabled
+    // Если динамическое изменение размера отключено, возвращаем нормализованные поинты
     if (!enableDynamicSizing) {
       return _normalizedSnapPoints;
     }
 
-    // early exit, if handle height is not calculated yet.
-    if (handleHeight.value === INITIAL_HANDLE_HEIGHT) {
-      return [INITIAL_SNAP_POINT];
-    }
+    // Для динамического размера нам нужны реальные высоты
+    // Если их нет, используем разумные значения по умолчанию
+    const currentHandleHeight = handleHeight.value !== INITIAL_HANDLE_HEIGHT
+      ? handleHeight.value
+      : 24; // Стандартная высота хендлера
 
-    // early exit, if content height is not calculated yet.
-    if (contentHeight.value === INITIAL_CONTAINER_HEIGHT) {
-      return [INITIAL_SNAP_POINT];
-    }
+    const currentContentHeight = contentHeight.value !== INITIAL_CONTAINER_HEIGHT
+      ? contentHeight.value
+      : 200; // Минимальная высота контента
 
-    // calculate a new snap point based on content height.
-    const dynamicSnapPoint =
-      containerHeight.value -
-      Math.min(
-        contentHeight.value + handleHeight.value,
-        maxDynamicContentSize !== undefined
-          ? maxDynamicContentSize
-          : containerHeight.value
-      );
+    // Рассчитываем динамический снэп-поинт
+    const maxContentHeight = maxDynamicContentSize !== undefined
+      ? maxDynamicContentSize
+      : availableHeight;
 
-    // push dynamic snap point into the normalized snap points,
-    // only if it does not exists in the provided list already.
+    const dynamicSnapPoint = Math.max(
+      0,
+      availableHeight - Math.min(
+        currentContentHeight + currentHandleHeight,
+        maxContentHeight
+      )
+    );
+
+    // Добавляем динамический поинт, если его нет
     if (!_normalizedSnapPoints.includes(dynamicSnapPoint)) {
       _normalizedSnapPoints.push(dynamicSnapPoint);
     }
 
-    // sort all snap points.
+    // Сортируем все снэп-поинты (от большего к меньшему)
     _normalizedSnapPoints = _normalizedSnapPoints.sort((a, b) => b - a);
 
-    // locate the dynamic snap point index.
-    dynamicSnapPointIndex.value =
-      _normalizedSnapPoints.indexOf(dynamicSnapPoint);
+    // Находим индекс динамического поинта
+    const index = _normalizedSnapPoints.indexOf(dynamicSnapPoint);
+    if (index !== -1) {
+      dynamicSnapPointIndex.value = index;
+    }
 
     return _normalizedSnapPoints;
   }, [
@@ -101,31 +104,21 @@ export const useAnimatedSnapPoints = (
     footerHeight,
     enableDynamicSizing,
     maxDynamicContentSize,
-    dynamicSnapPointIndex,
   ]);
 
   const hasDynamicSnapPoint = useDerivedValue(() => {
-    /**
-     * if dynamic sizing is enabled, then we return true.
-     */
     if (enableDynamicSizing) {
       return true;
     }
 
-    // extract snap points from provided props
     const _snapPoints = snapPoints
       ? 'value' in snapPoints
         ? snapPoints.value
         : snapPoints
       : [];
 
-    /**
-     * if any of the snap points provided is a string, then we return true.
-     */
-    if (
-      _snapPoints.length &&
-      _snapPoints.find(snapPoint => typeof snapPoint === 'string')
-    ) {
+    if (_snapPoints.length &&
+      _snapPoints.some(snapPoint => typeof snapPoint === 'string')) {
       return true;
     }
 
