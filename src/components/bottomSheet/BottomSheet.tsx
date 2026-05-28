@@ -228,7 +228,6 @@ const BottomSheetComponent = forwardRef<BottomSheet, BottomSheetProps>(
       const timer = setTimeout(() => {
         const currentSnapPoints = animatedSnapPoints.get();
         if (currentSnapPoints[0] === INITIAL_SNAP_POINT || currentSnapPoints[0] === -999) {
-          console.log('⚠️ Snap points still not ready, forcing recalculation');
           // Триггерим пересчет
           animatedSnapPoints.set([...currentSnapPoints]);
         }
@@ -1156,18 +1155,11 @@ const BottomSheetComponent = forwardRef<BottomSheet, BottomSheetProps>(
     // biome-ignore lint/correctness/useExhaustiveDependencies(BottomSheet.name): used for debug only
     const handleExpand = useCallback(
       function handleExpand(animationConfigs?: WithSpringConfig | WithTimingConfig) {
-        if (__DEV__) {
-          console.log('🚀 handleExpand called', {
-            isLayoutCalculated: isLayoutCalculated.get(),
-            snapPoints: animatedSnapPoints.get()
-          });
-        }
 
         const snapPoints = animatedSnapPoints.get();
 
         // Если снэп-поинты не нормализованы, пробуем восстановиться
         if (snapPoints.length === 0 || snapPoints[0] === INITIAL_SNAP_POINT) {
-          console.log('⚠️ Snap points not ready, using fallback');
           // Используем фолбэк снэп-поинты на основе высоты экрана
           const screenHeight = Dimensions.get('window').height;
           const fallbackSnapPoints = [screenHeight * 0.5, screenHeight * 0.9];
@@ -1186,23 +1178,13 @@ const BottomSheetComponent = forwardRef<BottomSheet, BottomSheetProps>(
           nextPosition === animatedNextPosition.get() ||
           isForcedClosing.get()
         ) {
-          console.log('⚠️ Expand skipped:', {
-            sameIndex: snapPoints.length - 1 === animatedNextPositionIndex.get(),
-            samePosition: nextPosition === animatedNextPosition.get(),
-            forcedClosing: isForcedClosing.get()
-          });
           return;
         }
 
-        console.log('✅ Expanding to position:', nextPosition);
         isInTemporaryPosition.set(false);
-
-        // В handleExpand, вместо scheduleOnUI:
-        console.log('🎯 About to animate to:', nextPosition);
 
 // Прямая установка позиции (для теста)
         animatedPosition.set(nextPosition);
-        console.log('✅ Position set directly');
         // scheduleOnUI(animateToPosition, nextPosition, ANIMATION_SOURCE.USER, 0, animationConfigs);
       },
       [
@@ -1272,15 +1254,12 @@ const BottomSheetComponent = forwardRef<BottomSheet, BottomSheetProps>(
 
 
     useEffect(() => {
-      console.log('🔄 BottomSheet mounted, forcing layout initialization...');
-
       const initializeLayout = async () => {
         // Даем время на естественное измерение
         await new Promise(resolve => setTimeout(resolve, 300));
 
         // Проверяем и принудительно устанавливаем высоту контейнера
         if (animatedContainerHeight.get() === INITIAL_CONTAINER_HEIGHT) {
-          console.log('⚠️ Container height not set, using screen height');
           const screenHeight = Dimensions.get('window').height;
           _animatedContainerHeight.set(screenHeight);
         }
@@ -1288,10 +1267,8 @@ const BottomSheetComponent = forwardRef<BottomSheet, BottomSheetProps>(
         // Проверяем высоту хендлера
         if (animatedHandleHeight.get() === INITIAL_HANDLE_HEIGHT) {
           if (handleComponent === null) {
-            console.log('⚠️ No handle component, setting height to 0');
             animatedHandleHeight.set(0);
           } else {
-            console.log('⚠️ Handle height not measured, using default 24');
             animatedHandleHeight.set(24); // Стандартная высота
           }
         }
@@ -1305,16 +1282,8 @@ const BottomSheetComponent = forwardRef<BottomSheet, BottomSheetProps>(
 
         // Еще небольшая задержка
         setTimeout(() => {
-          console.log('📊 Layout status after init:', {
-            containerHeight: animatedContainerHeight.get(),
-            handleHeight: animatedHandleHeight.get(),
-            snapPoints: animatedSnapPoints.get(),
-            isLayoutCalculated: isLayoutCalculated.get()
-          });
-
           // Если всё ещё не готово, пробуем открыть принудительно
           if (!isLayoutCalculated.get()) {
-            console.log('⚠️ Layout still not calculated, forcing expand...');
             handleExpand();
           }
         }, 500);
