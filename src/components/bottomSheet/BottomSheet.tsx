@@ -1,4 +1,3 @@
-import invariant from 'invariant';
 import React, {
   useMemo,
   useCallback,
@@ -969,12 +968,24 @@ const BottomSheetComponent = forwardRef<BottomSheet, BottomSheetProps>(
         return;
       }
 
-      invariant(
-        index >= -1 && index <= snapPoints.length - 1,
-        `'index' was provided but out of the provided snap points range! expected value to be between -1, ${
-          snapPoints.length - 1
-        }`
-      );
+      /**
+       * Guard against an out-of-range index instead of throwing a fatal
+       * `Invariant Violation`. With dynamic snap points the array can shrink
+       * between the moment an index is captured (e.g. `restoreIndexRef` when a
+       * modal is minimized) and the moment it is applied on restore / keyboard
+       * hide, leaving a stale index that no longer exists. Clamp it into the
+       * valid range so the sheet stays alive.
+       */
+      const maxIndex = snapPoints.length - 1;
+      if (index < -1 || index > maxIndex) {
+        if (__DEV__) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[BottomSheet] 'index' (${index}) is out of the snap points range [-1, ${maxIndex}]; clamping.`
+          );
+        }
+        index = Math.max(-1, Math.min(index, maxIndex));
+      }
       if (__DEV__) {
         print({
           component: BottomSheet.name,
